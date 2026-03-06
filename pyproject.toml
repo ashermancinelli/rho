@@ -1,0 +1,24 @@
+[project]
+name = "rho"
+version = "0.1.0"
+description = "Stack-based array programming language compiling to MLIR"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pytest",
+    "pytest-xdist",
+]
+
+[project.optional-dependencies]
+mlir = [
+    "mlir-python-bindings",
+    "mlir-native-tools",
+    "eudsl-python-extras",
+]
+dev = []
+
+[build-system]
+requires = ["setuptools>=61"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
