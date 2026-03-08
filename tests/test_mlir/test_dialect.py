@@ -18,8 +18,8 @@ def ctx():
 
 
 def _m(ctx):
-    """Helper: create a fresh module and return (module, ip inside rho.main)."""
-    from rho.mlir.dialect import MainOp, YieldOp
+    """Helper: create a fresh module and return (module, block inside rho.main)."""
+    from rho.mlir.dialect import MainOp
     with Location.unknown(ctx):
         module = Module.create()
         with InsertionPoint(module.body):
@@ -33,38 +33,51 @@ def _i64(v):
 
 
 def test_const_int(ctx):
-    from rho.mlir.dialect import ConstIntOp, YieldOp
+    from rho.mlir.dialect import ConstOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        c = ConstIntOp()
+        c = ConstOp()
         c.operation.attributes["value"] = _i64(42)
         YieldOp()
     assert module.operation.verify()
     s = str(module)
-    assert "rho.const_int" in s
+    assert "rho.const" in s
     assert "42" in s
 
 
-def test_const_str(ctx):
-    from rho.mlir.dialect import ConstStrOp, YieldOp
+def test_const_float(ctx):
+    from rho.mlir.dialect import ConstOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        c = ConstStrOp()
+        c = ConstOp()
+        c.operation.attributes["value"] = FloatAttr.get(F64Type.get(), 3.14)
+        YieldOp()
+    assert module.operation.verify()
+    s = str(module)
+    assert "rho.const" in s
+    assert "3.14" in s
+
+
+def test_const_str(ctx):
+    from rho.mlir.dialect import ConstOp, YieldOp
+    module, blk = _m(ctx)
+    with InsertionPoint(blk):
+        c = ConstOp()
         c.operation.attributes["value"] = StringAttr.get("hello")
         YieldOp()
     assert module.operation.verify()
     s = str(module)
-    assert "rho.const_str" in s
+    assert "rho.const" in s
     assert "hello" in s
 
 
 def test_prim_add(ctx):
-    from rho.mlir.dialect import ConstIntOp, PrimOp, YieldOp
+    from rho.mlir.dialect import ConstOp, PrimOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        a = ConstIntOp()
+        a = ConstOp()
         a.operation.attributes["value"] = _i64(5)
-        b = ConstIntOp()
+        b = ConstOp()
         b.operation.attributes["value"] = _i64(3)
         p = PrimOp(a.out, b.out)
         p.operation.attributes["op"] = StringAttr.get("+")
@@ -76,26 +89,25 @@ def test_prim_add(ctx):
 
 
 def test_prim_mul(ctx):
-    from rho.mlir.dialect import ConstIntOp, PrimOp, YieldOp
+    from rho.mlir.dialect import ConstOp, PrimOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        a = ConstIntOp()
+        a = ConstOp()
         a.operation.attributes["value"] = _i64(7)
-        b = ConstIntOp()
+        b = ConstOp()
         b.operation.attributes["value"] = _i64(6)
         p = PrimOp(a.out, b.out)
         p.operation.attributes["op"] = StringAttr.get("*")
         YieldOp()
     assert module.operation.verify()
-    s = str(module)
-    assert 'op = "*"' in s
+    assert 'op = "*"' in str(module)
 
 
 def test_dup(ctx):
-    from rho.mlir.dialect import ConstIntOp, DupOp, YieldOp
+    from rho.mlir.dialect import ConstOp, DupOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        c = ConstIntOp()
+        c = ConstOp()
         c.operation.attributes["value"] = _i64(10)
         DupOp(c.out)
         YieldOp()
@@ -104,12 +116,12 @@ def test_dup(ctx):
 
 
 def test_swap(ctx):
-    from rho.mlir.dialect import ConstIntOp, SwapOp, YieldOp
+    from rho.mlir.dialect import ConstOp, SwapOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        a = ConstIntOp()
+        a = ConstOp()
         a.operation.attributes["value"] = _i64(1)
-        b = ConstIntOp()
+        b = ConstOp()
         b.operation.attributes["value"] = _i64(2)
         SwapOp(a.out, b.out)
         YieldOp()
@@ -118,10 +130,10 @@ def test_swap(ctx):
 
 
 def test_drop(ctx):
-    from rho.mlir.dialect import ConstIntOp, DropOp, YieldOp
+    from rho.mlir.dialect import ConstOp, DropOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        c = ConstIntOp()
+        c = ConstOp()
         c.operation.attributes["value"] = _i64(99)
         DropOp(c.out)
         YieldOp()
@@ -130,10 +142,10 @@ def test_drop(ctx):
 
 
 def test_def_and_load(ctx):
-    from rho.mlir.dialect import ConstIntOp, DefOp, LoadOp, YieldOp
+    from rho.mlir.dialect import ConstOp, DefOp, LoadOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        c = ConstIntOp()
+        c = ConstOp()
         c.operation.attributes["value"] = _i64(42)
         d = DefOp(c.out)
         d.operation.attributes["name"] = StringAttr.get("x")
@@ -148,7 +160,7 @@ def test_def_and_load(ctx):
 
 
 def test_fn_with_params(ctx):
-    from rho.mlir.dialect import ConstIntOp, FnOp, PrimOp, DefOp, YieldOp, ValueType
+    from rho.mlir.dialect import FnOp, PrimOp, DefOp, YieldOp, ValueType
     module, blk = _m(ctx)
     with InsertionPoint(blk):
         fn = FnOp()
@@ -197,12 +209,12 @@ def test_fn_nested(ctx):
 
 def test_full_program_5_3_add(ctx):
     """Full program: 5 3 +."""
-    from rho.mlir.dialect import ConstIntOp, PrimOp, YieldOp
+    from rho.mlir.dialect import ConstOp, PrimOp, YieldOp
     module, blk = _m(ctx)
     with InsertionPoint(blk):
-        c5 = ConstIntOp()
+        c5 = ConstOp()
         c5.operation.attributes["value"] = _i64(5)
-        c3 = ConstIntOp()
+        c3 = ConstOp()
         c3.operation.attributes["value"] = _i64(3)
         p = PrimOp(c5.out, c3.out)
         p.operation.attributes["op"] = StringAttr.get("+")
@@ -210,6 +222,6 @@ def test_full_program_5_3_add(ctx):
     assert module.operation.verify()
     s = str(module)
     assert "rho.main" in s
-    assert s.count("rho.const_int") == 2
+    assert s.count("rho.const") == 2
     assert "rho.prim" in s
     assert "rho.yield" in s

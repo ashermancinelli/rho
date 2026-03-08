@@ -22,18 +22,8 @@ class ValueType(RhoDialect.Type, name="value"):
 
 # -- Ops: constants --
 
-class ConstIntOp(RhoDialect.Operation, name="const_int"):
-    """Produce an integer constant as a tagged immediate."""
-    out: Result[ValueType[()]]
-
-
-class ConstFloatOp(RhoDialect.Operation, name="const_float"):
-    """Produce a float constant (heap-allocated)."""
-    out: Result[ValueType[()]]
-
-
-class ConstStrOp(RhoDialect.Operation, name="const_str"):
-    """Produce a string constant (heap-allocated)."""
+class ConstOp(RhoDialect.Operation, name="const"):
+    """Produce a constant value. Use one of: IntegerAttr, FloatAttr, StringAttr."""
     out: Result[ValueType[()]]
 
 
