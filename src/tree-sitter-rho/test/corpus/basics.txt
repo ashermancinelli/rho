@@ -81,3 +81,37 @@ double <- dup +
     body: (apply
       (identifier)
       (primitive))))
+
+================
+Drop
+================
+(a b c) .
+---
+
+(program
+  (fn
+    params: (param
+      (identifier))
+    params: (param
+      (identifier))
+    params: (param
+      (identifier))
+    body: (drop)))
+
+================
+Semicolon separator
+================
+x <- 1; y <- 2; x y +
+---
+
+(program
+  (definition
+    name: (identifier)
+    body: (number))
+  (definition
+    name: (identifier)
+    body: (number))
+  (apply
+    (identifier)
+    (identifier)
+    (primitive)))

@@ -10,6 +10,8 @@
 (param
   (identifier) @variable.parameter)
 
+(drop) @keyword
+
 (comment) @comment
 
 "<-" @keyword.operator

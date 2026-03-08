@@ -35,6 +35,10 @@
           "named": true
         },
         {
+          "type": "drop",
+          "named": true
+        },
+        {
           "type": "fn",
           "named": true
         },
@@ -68,6 +72,10 @@
         "types": [
           {
             "type": "apply",
+            "named": true
+          },
+          {
+            "type": "drop",
             "named": true
           },
           {
@@ -114,6 +122,10 @@
           },
           {
             "type": "block",
+            "named": true
+          },
+          {
+            "type": "drop",
             "named": true
           },
           {
@@ -184,6 +196,10 @@
           "named": true
         },
         {
+          "type": "drop",
+          "named": true
+        },
+        {
           "type": "fn",
           "named": true
         },
@@ -231,8 +247,16 @@
     "named": false
   },
   {
+    "type": ";",
+    "named": false
+  },
+  {
     "type": "<-",
     "named": false
+  },
+  {
+    "type": "drop",
+    "named": true
   },
   {
     "type": "identifier",

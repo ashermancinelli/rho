@@ -84,7 +84,15 @@ class Fn(ASTNode):
         return f"Fn(({params}) {self.body})"
 
 
-Expr = Union[Lit, Word, Primitive, Apply, Fn]
+@dataclass
+class Drop(ASTNode):
+    """Drop: '.' — discard top of stack (or used as fn body to discard params)."""
+
+    def __str__(self) -> str:
+        return "Drop()"
+
+
+Expr = Union[Lit, Word, Primitive, Apply, Fn, Drop]
 
 
 @dataclass

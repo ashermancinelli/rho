@@ -135,3 +135,20 @@ def test_parse_tacit():
     assert "Def('double'" in r
     assert "Primitive('dup')" in r
     assert "Primitive('+')" in r
+
+
+def test_parse_drop():
+    source = "(a b c) ."
+    program = parse(source)
+    r = ast_repr(program)
+    assert "Fn((a b c) Drop())" == r.removeprefix("Program(").removesuffix(")")
+
+
+def test_parse_semicolon_separator():
+    source = "x <- 1; y <- 2; x y +"
+    program = parse(source)
+    r = ast_repr(program)
+    assert r.count("Def(") == 2
+    assert "Def('x'" in r
+    assert "Def('y'" in r
+    assert "Apply(Word('x') Word('y') Primitive('+'))" in r

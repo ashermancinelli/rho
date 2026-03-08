@@ -8,25 +8,29 @@ module.exports = grammar({
   rules: {
     program: ($) =>
       seq(
-        repeat(seq($._statement, $._newline)),
+        repeat(seq($._statement, $._sep)),
         optional($._statement),
       ),
+
+    _sep: ($) => choice(/\n/, ";"),
 
     _statement: ($) => choice($.definition, $._expression),
 
     definition: ($) =>
       seq(field("name", $.identifier), "<-", field("body", $._expression)),
 
-    _expression: ($) => choice($.fn, $.apply, $._atom),
+    _expression: ($) => choice($.fn, $.drop, $.apply, $._atom),
 
     apply: ($) => prec.left(1, seq($._atom, repeat1($._atom))),
 
     _atom: ($) => choice($.number, $.identifier, $.primitive),
 
+    drop: ($) => ".",
+
     fn: ($) =>
       prec(2, seq(
         "(", field("params", repeat1($.param)), ")",
-        field("body", choice($.block, $._expression)),
+        field("body", choice($.block, $._expression, $.drop)),
       )),
 
     param: ($) => $.identifier,
@@ -34,7 +38,7 @@ module.exports = grammar({
     block: ($) =>
       seq(
         "{",
-        repeat(seq(optional($._expression), $._newline)),
+        repeat(seq(optional($._expression), $._sep)),
         optional($._expression),
         "}",
       ),
@@ -46,7 +50,5 @@ module.exports = grammar({
     primitive: ($) => choice("+", "-", "*", "/"),
 
     comment: ($) => seq("--", /.*/),
-
-    _newline: ($) => /\n/,
   },
 });
