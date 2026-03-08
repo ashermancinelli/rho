@@ -8,6 +8,7 @@ dependencies = [
     "pytest",
     "pytest-xdist",
     "tree-sitter",
+    "prompt_toolkit",
 ]
 
 [project.optional-dependencies]
@@ -19,7 +20,7 @@ mlir = [
 dev = []
 
 [project.scripts]
-ast-repl = "rho.tools.ast_repl:main"
+rho-ast-repl = "rho.tools.ast_repl:main"
 
 [build-system]
 requires = ["setuptools>=61"]
