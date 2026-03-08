@@ -5,7 +5,7 @@ from typing import Union
 import tree_sitter_rho
 from tree_sitter import Language, Parser as TSParser
 
-from rho.ast import Apply, Drop, Fn, Def, Expr, Lit, Primitive, Program, Word
+from rho.ast import Apply, Array, Drop, Fn, Def, Expr, Lit, Primitive, Program, Str, Word
 
 
 PRIMITIVES = {"+", "-", "*", "/", "dup", "swap", "drop", "over"}
@@ -41,6 +41,16 @@ def _convert_expression(node) -> Expr:
     if t == "apply":
         terms = [_convert_expression(c) for c in node.named_children]
         return Apply(terms=terms)
+
+    if t == "string":
+        raw = _text(node)
+        # Strip surrounding quotes and process escapes
+        inner = raw[1:-1].replace("\\n", "\n").replace("\\t", "\t").replace("\\\\", "\\").replace('\\"', '"').replace("\\0", "\0")
+        return Str(value=inner)
+
+    if t == "array":
+        elems = [_convert_expression(c) for c in node.named_children]
+        return Array(elems=elems)
 
     if t == "drop":
         return Drop()

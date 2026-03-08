@@ -115,3 +115,61 @@ x <- 1; y <- 2; x y +
     (identifier)
     (identifier)
     (primitive)))
+
+================
+String literal
+================
+"hello world"
+---
+
+(program
+  (string))
+
+================
+String with escape
+================
+"hello\nworld"
+---
+
+(program
+  (string
+    (escape_sequence)))
+
+================
+Array literal
+================
+[1 2 3]
+---
+
+(program
+  (array
+    (number)
+    (number)
+    (number)))
+
+================
+Nested array
+================
+[[1 2] [3 4]]
+---
+
+(program
+  (array
+    (array
+      (number)
+      (number))
+    (array
+      (number)
+      (number))))
+
+================
+Array with mixed atoms
+================
+[1 2 x]
+---
+
+(program
+  (array
+    (number)
+    (number)
+    (identifier)))

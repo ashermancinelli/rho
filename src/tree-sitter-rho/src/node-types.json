@@ -8,6 +8,10 @@
       "required": true,
       "types": [
         {
+          "type": "array",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         },
@@ -17,6 +21,41 @@
         },
         {
           "type": "primitive",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "array",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "array",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "number",
+          "named": true
+        },
+        {
+          "type": "primitive",
+          "named": true
+        },
+        {
+          "type": "string",
           "named": true
         }
       ]
@@ -32,6 +71,10 @@
       "types": [
         {
           "type": "apply",
+          "named": true
+        },
+        {
+          "type": "array",
           "named": true
         },
         {
@@ -52,6 +95,10 @@
         },
         {
           "type": "primitive",
+          "named": true
+        },
+        {
+          "type": "string",
           "named": true
         }
       ]
@@ -75,6 +122,10 @@
             "named": true
           },
           {
+            "type": "array",
+            "named": true
+          },
+          {
             "type": "drop",
             "named": true
           },
@@ -92,6 +143,10 @@
           },
           {
             "type": "primitive",
+            "named": true
+          },
+          {
+            "type": "string",
             "named": true
           }
         ]
@@ -121,6 +176,10 @@
             "named": true
           },
           {
+            "type": "array",
+            "named": true
+          },
+          {
             "type": "block",
             "named": true
           },
@@ -142,6 +201,10 @@
           },
           {
             "type": "primitive",
+            "named": true
+          },
+          {
+            "type": "string",
             "named": true
           }
         ]
@@ -192,6 +255,10 @@
           "named": true
         },
         {
+          "type": "array",
+          "named": true
+        },
+        {
           "type": "definition",
           "named": true
         },
@@ -214,9 +281,32 @@
         {
           "type": "primitive",
           "named": true
+        },
+        {
+          "type": "string",
+          "named": true
         }
       ]
     }
+  },
+  {
+    "type": "string",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "escape_sequence",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "\"",
+    "named": false
   },
   {
     "type": "(",
@@ -255,7 +345,19 @@
     "named": false
   },
   {
+    "type": "[",
+    "named": false
+  },
+  {
+    "type": "]",
+    "named": false
+  },
+  {
     "type": "drop",
+    "named": true
+  },
+  {
+    "type": "escape_sequence",
     "named": true
   },
   {

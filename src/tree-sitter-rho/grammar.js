@@ -23,7 +23,7 @@ module.exports = grammar({
 
     apply: ($) => prec.left(1, seq($._atom, repeat1($._atom))),
 
-    _atom: ($) => choice($.number, $.identifier, $.primitive),
+    _atom: ($) => choice($.number, $.string, $.array, $.identifier, $.primitive),
 
     drop: ($) => ".",
 
@@ -42,6 +42,19 @@ module.exports = grammar({
         optional($._expression),
         "}",
       ),
+
+    array: ($) => seq("[", repeat($._atom), "]"),
+
+    string: ($) => seq(
+      '"',
+      repeat(choice(
+        $.escape_sequence,
+        /[^"\\]+/,
+      )),
+      '"',
+    ),
+
+    escape_sequence: ($) => /\\[\\\"nt0]/,
 
     number: ($) => /\d+(\.\d+)?/,
 

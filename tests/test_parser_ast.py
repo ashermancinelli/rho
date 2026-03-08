@@ -152,3 +152,36 @@ def test_parse_semicolon_separator():
     assert "Def('x'" in r
     assert "Def('y'" in r
     assert "Apply(Word('x') Word('y') Primitive('+'))" in r
+
+
+def test_parse_string():
+    program = parse('"hello world"')
+    r = ast_repr(program)
+    assert "Str('hello world')" in r
+
+
+def test_parse_string_escape():
+    program = parse(r'"hello\nworld"')
+    r = ast_repr(program)
+    assert "Str('hello\\nworld')" in r
+
+
+def test_parse_array():
+    program = parse("[1 2 3]")
+    r = ast_repr(program)
+    assert "Array([Lit(1) Lit(2) Lit(3)])" in r
+
+
+def test_parse_nested_array():
+    program = parse("[[1 2] [3 4]]")
+    r = ast_repr(program)
+    assert "Array(" in r
+    assert r.count("Array(") == 3  # outer + two inner
+
+
+def test_parse_array_in_expression():
+    program = parse("[1 2 3] [4 5 6] +")
+    r = ast_repr(program)
+    assert "Apply(" in r
+    assert "Array([Lit(1) Lit(2) Lit(3)])" in r
+    assert "Primitive('+')" in r

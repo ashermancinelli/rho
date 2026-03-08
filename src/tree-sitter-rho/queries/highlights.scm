@@ -1,5 +1,9 @@
 (number) @number
 
+(string) @string
+
+(escape_sequence) @string.escape
+
 (primitive) @operator
 
 (identifier) @variable
@@ -19,3 +23,5 @@
 ")" @punctuation.bracket
 "{" @punctuation.bracket
 "}" @punctuation.bracket
+"[" @punctuation.bracket
+"]" @punctuation.bracket

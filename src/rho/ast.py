@@ -85,6 +85,25 @@ class Fn(ASTNode):
 
 
 @dataclass
+class Str(ASTNode):
+    """String literal."""
+    value: str
+
+    def __str__(self) -> str:
+        return f"Str({self.value!r})"
+
+
+@dataclass
+class Array(ASTNode):
+    """Array literal: [elem1 elem2 ...]."""
+    elems: list["Expr"]
+
+    def __str__(self) -> str:
+        inner = " ".join(str(e) for e in self.elems)
+        return f"Array([{inner}])"
+
+
+@dataclass
 class Drop(ASTNode):
     """Drop: '.' — discard top of stack (or used as fn body to discard params)."""
 
@@ -92,7 +111,7 @@ class Drop(ASTNode):
         return "Drop()"
 
 
-Expr = Union[Lit, Word, Primitive, Apply, Fn, Drop]
+Expr = Union[Lit, Str, Array, Word, Primitive, Apply, Fn, Drop]
 
 
 @dataclass
