@@ -9,15 +9,9 @@ dependencies = [
     "pytest-xdist",
     "tree-sitter",
     "prompt_toolkit",
-]
-
-[project.optional-dependencies]
-mlir = [
     "mlir-python-bindings",
-    "mlir-native-tools",
     "eudsl-python-extras",
 ]
-dev = []
 
 [project.scripts]
 rho-ast-repl = "rho.tools.ast_repl:main"
@@ -27,3 +21,6 @@ requires = ["setuptools>=61"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.uv]
+find-links = ["https://llvm.github.io/eudsl"]
