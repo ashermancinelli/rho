@@ -17,6 +17,9 @@ mlir = [
 ]
 dev = []
 
+[project.scripts]
+ast-repl = "rho.tools.ast_repl:main"
+
 [build-system]
 requires = ["setuptools>=61"]
 
