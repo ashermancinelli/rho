@@ -30,7 +30,6 @@ class ASTNode:
         return tuple(parts)
 
 
-# Expression nodes
 @dataclass
 class Lit(ASTNode):
     """Numeric literal (int or float)."""
@@ -60,7 +59,7 @@ class Primitive(ASTNode):
 
 @dataclass
 class Apply(ASTNode):
-    """Stack application: sequence of expressions (first pushed first, then applied)."""
+    """Stack application: sequence of expressions."""
     terms: list["Expr"]
 
     def __str__(self) -> str:
@@ -69,29 +68,23 @@ class Apply(ASTNode):
 
 
 @dataclass
-class Lambda(ASTNode):
-    """Lambda: (params) -> body."""
+class Fn(ASTNode):
+    """Function: (params) body. Parens pop values off the stack and bind names.
+
+    body is either a single Expr (inline) or a list of Expr (block).
+    """
     params: list[str]
-    body: "Expr"
+    body: Union["Expr", list["Expr"]]
 
     def __str__(self) -> str:
         params = " ".join(self.params)
-        return f"Lambda(({params}) -> {self.body})"
+        if isinstance(self.body, list):
+            stmts = "; ".join(str(s) for s in self.body)
+            return f"Fn(({params}) {{ {stmts} }})"
+        return f"Fn(({params}) {self.body})"
 
 
-@dataclass
-class Block(ASTNode):
-    """Block: (params) { stmts }."""
-    params: list[str]
-    stmts: list["Expr"]
-
-    def __str__(self) -> str:
-        params = " ".join(self.params)
-        stmts = "; ".join(str(s) for s in self.stmts)
-        return f"Block(({params}) {{ {stmts} }})"
-
-
-Expr = Union[Lit, Word, Primitive, Apply, Lambda, Block]
+Expr = Union[Lit, Word, Primitive, Apply, Fn]
 
 
 @dataclass
@@ -120,15 +113,6 @@ def ast_repr(program: Program) -> str:
 
 
 def ast_pprint(program: Program, indent: int = 2, width: int = 80) -> None:
-    """Pretty-print a Program using the stdlib pprint module.
-
-    All AST nodes (via ASTNode base) implement __len__, __getitem__, and to_tuple
-    from their dataclass fields. Usage::
-
-        from pprint import pprint
-        pprint(program.to_tuple(), indent=2)
-        # or
-        ast_pprint(program)
-    """
+    """Pretty-print a Program using the stdlib pprint module."""
     from pprint import pprint
     pprint(program.to_tuple(), indent=indent, width=width)

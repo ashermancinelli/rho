@@ -3,7 +3,6 @@
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterator
 
 
 class TokenKind(Enum):
@@ -11,7 +10,6 @@ class TokenKind(Enum):
     NUMBER = "number"
     NEWLINE = "newline"
     ARROW_LEFT = "<-"
-    ARROW = "->"
     LPAREN = "("
     RPAREN = ")"
     LBRACE = "{"
@@ -29,15 +27,19 @@ class Token:
         return f"{self.kind.value}({self.value!r})"
 
 
-# Words: ASCII letters, digits, underscore. Numbers: digits and optional . for float.
-# Symbols: <- -> ( ) { }
 _IDENT_RE = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*|[+*/-]+")
 _NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
-_SPECIAL = {"<-": TokenKind.ARROW_LEFT, "->": TokenKind.ARROW, "(": TokenKind.LPAREN, ")": TokenKind.RPAREN, "{": TokenKind.LBRACE, "}": TokenKind.RBRACE}
+_SPECIAL = {
+    "<-": TokenKind.ARROW_LEFT,
+    "(": TokenKind.LPAREN,
+    ")": TokenKind.RPAREN,
+    "{": TokenKind.LBRACE,
+    "}": TokenKind.RBRACE,
+}
 
 
 def tokenize(source: str) -> list[Token]:
-    """Tokenize Rho source; ANSI only. Yields Token with kind and value."""
+    """Tokenize Rho source; ANSI only."""
     tokens: list[Token] = []
     line, col = 1, 1
     i = 0
@@ -55,7 +57,10 @@ def tokenize(source: str) -> list[Token]:
             line += 1
             col = 1
             continue
-        # Try two-char symbol
+        if c == "-" and i + 1 < n and source[i + 1] == "-":
+            while i < n and source[i] != "\n":
+                i += 1
+            continue
         if i + 1 < n:
             two = source[i : i + 2]
             if two in _SPECIAL:
@@ -63,13 +68,11 @@ def tokenize(source: str) -> list[Token]:
                 i += 2
                 col += 2
                 continue
-        # One-char symbol
         if c in _SPECIAL:
             tokens.append(Token(_SPECIAL[c], c, line, col))
             i += 1
             col += 1
             continue
-        # Number
         m = _NUMBER_RE.match(source, i)
         if m:
             raw = m.group(0)
@@ -77,7 +80,6 @@ def tokenize(source: str) -> list[Token]:
             i += len(raw)
             col += len(raw)
             continue
-        # Identifier or primitive (word)
         m = _IDENT_RE.match(source, i)
         if m:
             raw = m.group(0)
@@ -85,7 +87,6 @@ def tokenize(source: str) -> list[Token]:
             i += len(raw)
             col += len(raw)
             continue
-        # Unknown: skip one char to avoid infinite loop
         i += 1
         col += 1
 

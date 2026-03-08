@@ -2,8 +2,11 @@
 
 from typing import NoReturn
 
-from rho.ast import Apply, Block, Def, Expr, Lambda, Lit, Primitive, Program, Word
+from rho.ast import Apply, Fn, Def, Expr, Lit, Primitive, Program, Word
 from rho.lexer import Token, TokenKind, tokenize
+
+
+PRIMITIVES = {"+", "-", "*", "/", "dup", "swap", "drop", "over"}
 
 
 class ParseError(Exception):
@@ -43,6 +46,10 @@ class Parser:
         self._advance()
         return t
 
+    def _skip_newlines(self) -> None:
+        while self._peek() and self._peek().kind == TokenKind.NEWLINE:
+            self._advance()
+
     def parse_program(self) -> Program:
         items: list[Def | Expr] = []
         while True:
@@ -50,20 +57,13 @@ class Parser:
             t = self._peek()
             if t is None:
                 break
-            # Definition: ident <- expr
             if t.kind == TokenKind.IDENT and self._is_def():
                 items.append(self._parse_def())
                 continue
-            # Otherwise expression
             items.append(self._parse_expression())
         return Program(items)
 
-    def _skip_newlines(self) -> None:
-        while self._peek() and self._peek().kind == TokenKind.NEWLINE:
-            self._advance()
-
     def _is_def(self) -> bool:
-        """Check if we have ident <- ... (need to look ahead)."""
         if self.pos + 1 >= len(self.tokens):
             return False
         return self.tokens[self.pos + 1].kind == TokenKind.ARROW_LEFT
@@ -75,20 +75,17 @@ class Parser:
         return Def(name=name_t.value, body=body)
 
     def _parse_expression(self) -> Expr:
-        t = self._peek()
-        if t is None:
-            _fail("expected expression, got end of input")
-        if t.kind == TokenKind.LPAREN:
-            self._advance()
-            return self._parse_paren_expr()
-        # Stack expression: sequence of terms (lit, word, primitive) until we hit ) } or end
+        """Parse a stack expression: sequence of terms until newline/)/}/end.
+
+        ( always starts a param list (function), never grouping.
+        """
         terms: list[Expr] = []
         while True:
             t = self._peek()
             if t is None or t.kind in (TokenKind.NEWLINE, TokenKind.RPAREN, TokenKind.RBRACE):
                 break
             if t.kind == TokenKind.LPAREN:
-                terms.append(self._parse_expression())
+                terms.append(self._parse_fn())
                 continue
             if t.kind == TokenKind.NUMBER:
                 self._advance()
@@ -100,11 +97,10 @@ class Parser:
                 continue
             if t.kind == TokenKind.IDENT:
                 self._advance()
-                name = t.value
-                if name in ("+", "-", "*", "/") or name in ("dup", "swap", "drop", "over"):
-                    terms.append(Primitive(name))
+                if t.value in PRIMITIVES:
+                    terms.append(Primitive(t.value))
                 else:
-                    terms.append(Word(name))
+                    terms.append(Word(t.value))
                 continue
             _fail("expected term in expression", t)
         if not terms:
@@ -113,8 +109,12 @@ class Parser:
             return terms[0]
         return Apply(terms=terms)
 
-    def _parse_paren_expr(self) -> Expr:
-        """After consuming '(', parse ( id* ) -> expr  or  ( id* ) { stmts }."""
+    def _parse_fn(self) -> Fn:
+        """Parse (params) expr  or  (params) { stmts }.
+
+        Parens always mean: pop values and bind names.
+        """
+        self._expect(TokenKind.LPAREN)
         params: list[str] = []
         while True:
             t = self._peek()
@@ -130,17 +130,12 @@ class Parser:
             _fail("expected identifier or ) in parameter list", t)
 
         t = self._peek()
-        if t is None:
-            _fail("expected -> or { after )")
-        if t.kind == TokenKind.ARROW:
-            self._advance()
-            body = self._parse_expression()
-            return Lambda(params=params, body=body)
-        if t.kind == TokenKind.LBRACE:
+        if t is not None and t.kind == TokenKind.LBRACE:
             self._advance()
             stmts = self._parse_block_stmts()
-            return Block(params=params, stmts=stmts)
-        _fail("expected -> or { after )", t)
+            return Fn(params=params, body=stmts)
+        body = self._parse_expression()
+        return Fn(params=params, body=body)
 
     def _parse_block_stmts(self) -> list[Expr]:
         stmts: list[Expr] = []

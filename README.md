@@ -4,11 +4,9 @@ Stack-based array programming language.
 
 ## Installation
 
-Create a virtualenv and install the project editably (deps go into `.venv/`):
-
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+uv venv .venv --seed --python 3.13
+source .venv/bin/activate
 pip install -e .
 ```
 
@@ -33,6 +31,3 @@ pip install -e ".[mlir]" -f https://llvm.github.io/eudsl
 > 5 5 5 f
 15
 ```
-
-Has primitives from Forth.
-Function syntax is sugar for popping arguments from the stack and pushing the result back.

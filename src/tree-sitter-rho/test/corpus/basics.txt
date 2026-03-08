@@ -1,0 +1,83 @@
+================
+Literal
+================
+42
+---
+
+(program
+  (number))
+
+================
+Apply
+================
+5 3 +
+---
+
+(program
+  (apply
+    (number)
+    (number)
+    (primitive)))
+
+================
+Definition
+================
+x <- 42
+---
+
+(program
+  (definition
+    name: (identifier)
+    body: (number)))
+
+================
+Function inline
+================
+add <- (a b) a + b
+---
+
+(program
+  (definition
+    name: (identifier)
+    body: (fn
+      params: (param
+        (identifier))
+      params: (param
+        (identifier))
+      body: (apply
+        (identifier)
+        (primitive)
+        (identifier)))))
+
+================
+Function block
+================
+f <- (x) {
+  x x *
+}
+---
+
+(program
+  (definition
+    name: (identifier)
+    body: (fn
+      params: (param
+        (identifier))
+      body: (block
+        (apply
+          (identifier)
+          (identifier)
+          (primitive))))))
+
+================
+Tacit
+================
+double <- dup +
+---
+
+(program
+  (definition
+    name: (identifier)
+    body: (apply
+      (identifier)
+      (primitive))))

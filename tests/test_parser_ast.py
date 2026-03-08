@@ -19,8 +19,7 @@ def test_parse_literal():
 
 def test_parse_apply_literals():
     program = parse("5 5 5")
-    expected = "Program(Apply(Lit(5) Lit(5) Lit(5)))"
-    assert ast_repr(program) == expected
+    assert ast_repr(program) == "Program(Apply(Lit(5) Lit(5) Lit(5)))"
 
 
 def test_parse_definition():
@@ -28,23 +27,24 @@ def test_parse_definition():
     assert ast_repr(program) == "Program(Def('f' <- Lit(1)))"
 
 
-def test_parse_lambda():
-    program = parse("f <- (a b) -> a + b")
-    expected = "Program(Def('f' <- Lambda((a b) -> Apply(Word('a') Primitive('+') Word('b')))))"
+def test_parse_fn_inline():
+    program = parse("f <- (a b) a + b")
+    expected = "Program(Def('f' <- Fn((a b) Apply(Word('a') Primitive('+') Word('b')))))"
     assert ast_repr(program) == expected
 
 
-def test_parse_block():
+def test_parse_fn_block():
     program = parse("f <- (a b c) { a + b + c }")
-    # Block with params (a b c) and one stmt: a + b + c
-    assert "Block((a b c)" in ast_repr(program)
-    assert "Apply(Word('a') Primitive('+') Word('b') Primitive('+') Word('c'))" in ast_repr(program)
+    r = ast_repr(program)
+    assert "Fn((a b c)" in r
+    assert "Apply(Word('a') Primitive('+') Word('b') Primitive('+') Word('c'))" in r
 
 
 def test_parse_multiple_defs_and_expr():
     program = parse("f <- + +\n5 5 5 f")
-    assert "Def('f'" in ast_repr(program)
-    assert "Apply(Lit(5) Lit(5) Lit(5) Word('f'))" in ast_repr(program)
+    r = ast_repr(program)
+    assert "Def('f'" in r
+    assert "Apply(Lit(5) Lit(5) Lit(5) Word('f'))" in r
 
 
 def test_parse_primitive():
@@ -53,40 +53,29 @@ def test_parse_primitive():
 
 
 def test_parse_larger_program_pprint():
-    """Larger program with multiple defs and exprs prints across multiple lines."""
-    source = """
-add <- (x y) -> x + y
-double <- (n) -> n n +
-add 3 5
-double 10
-"""
-    program = parse(source.strip())
+    source = "add <- (x y) x + y\ndouble <- (n) n n +\nadd 3 5\ndouble 10"
+    program = parse(source)
     got = ast_pprint_str(program)
-    assert "Program" in got
-    assert "Def" in got
-    assert "add" in got
-    assert "double" in got
-    assert "Lambda" in got
-    assert "Apply" in got
+    assert "Fn" in got
+    assert "add" in got and "double" in got
     assert "Lit" in got and "3" in got and "5" in got and "10" in got
-    # Multi-line: output has newlines and indentation
     lines = got.strip().split("\n")
     assert len(lines) >= 5
 
 
 def test_parse_larger_program_pprint_expected():
-    """Larger program pformat matches expected multi-line structure."""
-    source = "add <- (x y) -> x + y\ndouble <- (n) -> n n +\nadd 3 5\ndouble 10"
+    source = "add <- (x y) x + y\ndouble <- (n) n n +\nadd 3 5\ndouble 10"
     program = parse(source)
-    expected = """( 'Program',
+    expected = """\
+( 'Program',
   ( ( 'Def',
       'add',
-      ( 'Lambda',
+      ( 'Fn',
         ('x', 'y'),
         ('Apply', (('Word', 'x'), ('Primitive', '+'), ('Word', 'y'))))),
     ( 'Def',
       'double',
-      ( 'Lambda',
+      ( 'Fn',
         ('n',),
         ('Apply', (('Word', 'n'), ('Word', 'n'), ('Primitive', '+'))))),
     ('Apply', (('Word', 'add'), ('Lit', 3), ('Lit', 5))),
@@ -94,47 +83,55 @@ def test_parse_larger_program_pprint_expected():
     assert ast_pprint_str(program) == expected
 
 
-def test_parse_nested_lambda_pprint():
-    """Nested lambda (curried) prints across multiple lines."""
-    source = "curry_add <- (x) -> (y) -> x + y"
+def test_parse_nested_fn_pprint():
+    source = "curry_add <- (x) (y) x + y"
     program = parse(source)
     got = ast_pprint_str(program)
-    assert "Lambda" in got
-    assert "curry_add" in got
-    assert "Apply" in got
-    # Nested: inner Lambda inside outer Lambda
-    assert got.count("Lambda") >= 2
+    assert got.count("Fn") >= 2
     lines = got.strip().split("\n")
     assert len(lines) >= 4
 
 
 def test_parse_def_with_block_pprint():
-    """Def with block body prints across multiple lines."""
     source = "f <- (a b c) { a + b + c }"
     program = parse(source)
     got = ast_pprint_str(program)
-    assert "Block" in got
+    assert "Fn" in got
     assert "('a', 'b', 'c')" in got
-    assert "Apply" in got
-    assert "Primitive" in got
     lines = got.strip().split("\n")
     assert len(lines) >= 3
 
 
 def test_parse_mixed_defs_and_exprs_pprint():
-    """Several defs and trailing exprs produce a deep multi-line dump."""
-    source = """
-id <- (x) -> x
-one <- 1
-two <- 2
-id one
-id two
-one two +
-"""
-    program = parse(source.strip())
+    source = "id <- (x) x\none <- 1\ntwo <- 2\nid one\nid two\none two +"
+    program = parse(source)
     got = ast_pprint_str(program)
     assert got.count("Def") == 3
     assert "id" in got and "one" in got and "two" in got
     assert got.count("Apply") >= 3
     lines = got.strip().split("\n")
-    assert len(lines) >= 5  # multi-line dump
+    assert len(lines) >= 5
+
+
+def test_parse_multiline_block():
+    source = "f <- (a b c) {\na b\n*\nc\n+\n}"
+    program = parse(source)
+    r = ast_repr(program)
+    assert "Fn((a b c)" in r
+
+
+def test_parse_comment():
+    source = "x <- 1 -- this is a comment\nx"
+    program = parse(source)
+    r = ast_repr(program)
+    assert "Def('x'" in r
+    assert "Word('x')" in r
+
+
+def test_parse_tacit():
+    source = "double <- dup +"
+    program = parse(source)
+    r = ast_repr(program)
+    assert "Def('double'" in r
+    assert "Primitive('dup')" in r
+    assert "Primitive('+')" in r
