@@ -1,8 +1,8 @@
 """Rho MLIR dialect: types and operations defined via mlir.dialects.ext.
 
-Values are SSA (!rho.value). The stack is resolved at AST->MLIR time:
-each AST node that pushes produces a !rho.value result, and each node
-that pops takes a !rho.value operand.
+The stack is threaded as an SSA value (!rho.stack). Every op takes the
+current stack and produces a new one. Functions receive and return the
+stack — no explicit arity.
 """
 
 from mlir.ir import *
@@ -15,98 +15,109 @@ class RhoDialect(Dialect, name="rho"):
 
 # -- Types --
 
+class StackType(RhoDialect.Type, name="stack"):
+    """Operand stack threaded through all ops."""
+    pass
+
+
 class ValueType(RhoDialect.Type, name="value"):
     """Single-word tagged value (OCaml-style: immediate int or heap pointer)."""
     pass
 
 
+# -- Ops: stack creation --
+
+class InitStackOp(RhoDialect.Operation, name="init_stack"):
+    """Create an empty stack."""
+    out: Result[StackType[()]]
+
+
 # -- Ops: constants --
 
 class ConstOp(RhoDialect.Operation, name="const"):
-    """Produce a constant value. Use one of: IntegerAttr, FloatAttr, StringAttr."""
-    out: Result[ValueType[()]]
+    """Push a constant onto the stack. Attribute "value" is IntegerAttr, FloatAttr, or StringAttr."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
+
+# -- Ops: arrays --
 
 class MakeArrayOp(RhoDialect.Operation, name="make_array"):
-    """Construct an array from N element values."""
-    out: Result[ValueType[()]]
+    """Pop N elements from the stack, push an array. Attribute "count" is the number of elements."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 # -- Ops: primitives --
 
 class PrimOp(RhoDialect.Operation, name="prim"):
-    """Apply a binary primitive (+, -, *, /) element-wise with broadcast.
-
-    Attribute "op" is the primitive name string.
-    """
-    lhs: Operand[ValueType]
-    rhs: Operand[ValueType]
-    out: Result[ValueType[()]]
+    """Pop operands, apply primitive, push result. Attribute "op" is the primitive name."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 # -- Ops: stack manipulation --
 
 class DupOp(RhoDialect.Operation, name="dup"):
-    """Duplicate a value (identity — both results alias the input)."""
-    in_: Operand[ValueType]
-    out1: Result[ValueType[()]]
-    out2: Result[ValueType[()]]
+    """Duplicate the top of the stack."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 class SwapOp(RhoDialect.Operation, name="swap"):
-    """Swap two values (pass-through — reorder in SSA)."""
-    a: Operand[ValueType]
-    b: Operand[ValueType]
-    out_b: Result[ValueType[()]]
-    out_a: Result[ValueType[()]]
+    """Swap the top two elements."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 class OverOp(RhoDialect.Operation, name="over"):
-    """Copy the second value over the top."""
-    a: Operand[ValueType]
-    b: Operand[ValueType]
-    out_a: Result[ValueType[()]]
-    out_b: Result[ValueType[()]]
-    out_a2: Result[ValueType[()]]
+    """Copy second element over the top."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 class DropOp(RhoDialect.Operation, name="drop"):
-    """Discard a value."""
-    in_: Operand[ValueType]
+    """Discard the top of the stack."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 # -- Ops: names / scope --
 
 class DefOp(RhoDialect.Operation, name="def"):
-    """Bind a value to a name in the current scope (consumed, not on stack)."""
-    val: Operand[ValueType]
+    """Pop the top of the stack, bind to a name. Attribute "name" is the identifier."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 class LoadOp(RhoDialect.Operation, name="load"):
-    """Load a named value from scope."""
-    out: Result[ValueType[()]]
+    """Push a named value onto the stack. Attribute "name" is the identifier."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 # -- Ops: functions --
 
 class FnOp(RhoDialect.Operation, name="fn"):
-    """Define a function (closure). Body region takes N params, yields results."""
+    """Push a closure onto the stack. Body region takes and yields !rho.stack."""
+    stk: Operand[StackType]
     body: Region
-    out: Result[ValueType[()]]
+    out: Result[StackType[()]]
 
 
 class CallOp(RhoDialect.Operation, name="call"):
-    """Call a function value, passing N arguments, producing M results."""
-    callee: Operand[ValueType]
+    """Pop a function from the stack and call it. The function receives and returns the stack."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
 
 
 class YieldOp(RhoDialect.Operation, name="yield", traits=[IsTerminatorTrait]):
-    """Terminate a function body, yielding values back to caller."""
-    pass
+    """Terminate a function/main body, yielding the stack."""
+    stk: Operand[StackType]
 
 
 # -- Ops: entry point --
 
 class MainOp(RhoDialect.Operation, name="main"):
-    """Program entry point with a body region."""
+    """Program entry point. Body region takes and yields !rho.stack."""
     body: Region
