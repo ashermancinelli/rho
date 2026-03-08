@@ -104,6 +104,15 @@ class Array(ASTNode):
 
 
 @dataclass
+class Quote(ASTNode):
+    """Quote: &name — push a value without calling it."""
+    name: str
+
+    def __str__(self) -> str:
+        return f"Quote(&{self.name})"
+
+
+@dataclass
 class Drop(ASTNode):
     """Drop: '.' — discard top of stack (or used as fn body to discard params)."""
 
@@ -111,7 +120,7 @@ class Drop(ASTNode):
         return "Drop()"
 
 
-Expr = Union[Lit, Str, Array, Word, Primitive, Apply, Fn, Drop]
+Expr = Union[Lit, Str, Array, Word, Primitive, Apply, Fn, Quote, Drop]
 
 
 @dataclass

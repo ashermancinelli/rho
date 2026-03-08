@@ -16,6 +16,10 @@
 
 (drop) @keyword
 
+(quote
+  (identifier) @variable)
+"&" @keyword.operator
+
 (comment) @comment
 
 "<-" @keyword.operator

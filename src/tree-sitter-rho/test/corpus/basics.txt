@@ -173,3 +173,25 @@ Array with mixed atoms
     (number)
     (number)
     (identifier)))
+
+================
+Quote
+================
+&f
+---
+
+(program
+  (quote
+    (identifier)))
+
+================
+Quote in apply
+================
+5 &double
+---
+
+(program
+  (apply
+    (number)
+    (quote
+      (identifier))))

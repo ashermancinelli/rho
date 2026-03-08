@@ -5,7 +5,7 @@ from typing import Union
 import tree_sitter_rho
 from tree_sitter import Language, Parser as TSParser
 
-from rho.ast import Apply, Array, Drop, Fn, Def, Expr, Lit, Primitive, Program, Str, Word
+from rho.ast import Apply, Array, Drop, Fn, Def, Expr, Lit, Primitive, Program, Quote, Str, Word
 
 
 PRIMITIVES = {"+", "-", "*", "/", "dup", "swap", "drop", "over"}
@@ -51,6 +51,12 @@ def _convert_expression(node) -> Expr:
     if t == "array":
         elems = [_convert_expression(c) for c in node.named_children]
         return Array(elems=elems)
+
+    if t == "quote":
+        for child in node.named_children:
+            if child.type == "identifier":
+                return Quote(name=_text(child))
+        raise ParseError("quote missing identifier")
 
     if t == "drop":
         return Drop()

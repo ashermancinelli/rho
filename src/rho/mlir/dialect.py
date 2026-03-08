@@ -91,7 +91,13 @@ class DefOp(RhoDialect.Operation, name="def"):
 
 
 class LoadOp(RhoDialect.Operation, name="load"):
-    """Push a named value onto the stack. Attribute "name" is the identifier."""
+    """Push a named value onto the stack (no call). Attribute "name" is the identifier."""
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
+
+
+class EvalOp(RhoDialect.Operation, name="eval"):
+    """Load a named value; if it's a function, call it. Attribute "name" is the identifier."""
     stk: Operand[StackType]
     out: Result[StackType[()]]
 

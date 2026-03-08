@@ -185,3 +185,16 @@ def test_parse_array_in_expression():
     assert "Apply(" in r
     assert "Array([Lit(1) Lit(2) Lit(3)])" in r
     assert "Primitive('+')" in r
+
+
+def test_parse_quote():
+    program = parse("&f")
+    r = ast_repr(program)
+    assert "Quote(&f)" in r
+
+
+def test_parse_quote_in_apply():
+    program = parse("5 &double")
+    r = ast_repr(program)
+    assert "Apply(" in r
+    assert "Quote(&double)" in r

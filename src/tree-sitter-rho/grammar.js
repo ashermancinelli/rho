@@ -23,7 +23,9 @@ module.exports = grammar({
 
     apply: ($) => prec.left(1, seq($._atom, repeat1($._atom))),
 
-    _atom: ($) => choice($.number, $.string, $.array, $.identifier, $.primitive),
+    _atom: ($) => choice($.number, $.string, $.array, $.quote, $.identifier, $.primitive),
+
+    quote: ($) => seq("&", $.identifier),
 
     drop: ($) => ".",
 
