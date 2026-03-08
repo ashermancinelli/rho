@@ -145,6 +145,7 @@ class Parser:
     def _parse_block_stmts(self) -> list[Expr]:
         stmts: list[Expr] = []
         while True:
+            self._skip_newlines()
             t = self._peek()
             if t is None:
                 _fail("unclosed {")
