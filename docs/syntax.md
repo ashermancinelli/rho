@@ -5,20 +5,17 @@ ANSI-only. No Unicode symbols.
 ## Tokens
 
 - **Numbers**: `0`, `42`, `3.14`
+- **Strings**: `"hello"`, `"hello\nworld"`
 - **Identifiers**: `[a-zA-Z_][a-zA-Z0-9_]*`
 - **Primitives**: `+`, `-`, `*`, `/`
-- **Symbols**: `<-`, `(`, `)`, `{`, `}`
-- **Whitespace**: spaces/tabs separate tokens; newlines separate statements
+- **Quote**: `&name` pushes a value without calling it
+- **Drop**: `.`
+- **Symbols**: `<-`, `(`, `)`, `[`, `]`, `{`, `}`, `;`
+- **Whitespace**: spaces/tabs separate tokens; newlines or `;` separate statements
 
 ## Programs
 
-A program is a sequence of **statements** separated by newlines.
-
-```
-stmt
-stmt
-...
-```
+A program is a sequence of **statements** separated by newlines or semicolons.
 
 ## Statements
 
@@ -37,10 +34,10 @@ Evaluate `expr`, bind the result to `name` in the current scope.
 A sequence of terms evaluated left to right. Each term pushes value(s) onto the stack; primitives pop operands and push results.
 
 ```
-5 3 +       -- pushes 5, pushes 3, pops two and pushes 8
+5 3 +
 ```
 
-Terms: number literals, identifiers (push their value), primitives, or function calls.
+Terms: literals, arrays, quoted names, identifiers, primitives, functions, `match` expressions, or `.`.
 
 ## Functions
 
@@ -49,32 +46,52 @@ Terms: number literals, identifiers (push their value), primitives, or function 
 Parenthesized identifiers are sugar for popping values off the stack and naming them in the scope of the following expression or block.
 
 ```
-(a b) a + b         -- single-expression function
-(a b) {             -- block function
-  a + b
+(a b) a b +
+(a b) {
+  a b +
 }
 ```
 
-There is no `->`. The parenthesized names are always followed by either a single expression or a `{ }` block.
+There is no `->`.
 
 Calling a function pops its parameters from the stack and pushes the result(s).
 
 ```
-add <- (a b) a + b
-3 5 add             -- pushes 8
+add <- (a b) a b +
+3 5 add
+```
+
+Use `&name` to push a function (or other value) without auto-calling it.
+
+```
+10 iota 0 &plus fold
+```
+
+## Arrays
+
+Square brackets create array literals.
+
+```
+[1 2 3]
+[[1 2] [3 4]]
 ```
 
 ## Blocks
 
 `{ stmt; stmt; ... }` introduces a scope. Each statement can push values onto the stack. All pushed values remain on the stack when the block exits.
 
+## Match
+
+`match` evaluates guarded cases in order.
+
 ```
-f <- (x) {
-  x x *
-  x +
+(n) match {
+  { dup 0 > } { "greater than zero" printf }
+  { true }    { "LE zero" printf }
 }
-3 f   -- pushes 9, then pushes 3+9=12... depends on stack discipline
 ```
+
+Each case is `{ guard_expr } { body_expr }`.
 
 ## Scope
 
