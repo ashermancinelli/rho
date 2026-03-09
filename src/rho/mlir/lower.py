@@ -147,19 +147,17 @@ def convert_rho_to_runtime(op, pass_):
             result = func.CallOp([ptr], "rho_eval", [adaptor.stk, name_h])
         rewriter.replace_op(op, result)
 
+    _extracted_fns = []
+
     def convert_fn(op, adaptor, converter, rewriter):
         global _fn_counter
         fn_name = f"rho_fn_{_fn_counter}"
         _fn_counter += 1
-        with rewriter.ip:
-            fn_type = FunctionType.get([ptr, ptr], [ptr])
-            fn_op = func.FuncOp(fn_name, fn_type, visibility="private")
-            op.body.blocks[0].append_to(fn_op.body)
-            fn_op.body.blocks[0].add_argument(ptr, Location.unknown())
-            rewriter.convert_region_types(fn_op.body, converter)
+        _extracted_fns.append((fn_name, op))
 
-            fn_ptr = llvm.addressof(ptr, fn_name)
-            closure_val = func.CallOp([i64], "rho_make_closure", [fn_ptr, adaptor.stk])
+        with rewriter.ip:
+            fn_ptr = func.CallOp([ptr], f"rho_get_fn_ptr_{fn_name}", [])
+            closure_val = func.CallOp([i64], "rho_make_closure", [fn_ptr.result, adaptor.stk])
             result = func.CallOp([ptr], "rho_push", [adaptor.stk, closure_val.result])
         rewriter.replace_op(op, result)
 
@@ -205,3 +203,7 @@ def convert_rho_to_runtime(op, pass_):
         func.FuncOp("rho_def", FunctionType.get([ptr, i64], [ptr]), visibility="private")
         func.FuncOp("rho_load", FunctionType.get([ptr, i64], [ptr]), visibility="private")
         func.FuncOp("rho_eval", FunctionType.get([ptr, i64], [ptr]), visibility="private")
+        fn_body_type = FunctionType.get([ptr, ptr], [ptr])
+        for fn_name, _ in _extracted_fns:
+            func.FuncOp(fn_name, fn_body_type, visibility="private")
+            func.FuncOp(f"rho_get_fn_ptr_{fn_name}", FunctionType.get([], [ptr]), visibility="private")

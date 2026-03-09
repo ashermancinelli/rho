@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 rho-ast-repl = "rho.tools.ast_repl:main"
 rho-mlir-repl = "rho.tools.mlir_repl:main"
+rho-lower-repl = "rho.tools.lower_repl:main"
 
 [build-system]
 requires = ["setuptools>=61"]
