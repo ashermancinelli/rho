@@ -3,16 +3,23 @@
 import pytest
 
 from mlir.ir import (
-    Context, Location, Module, InsertionPoint,
-    IntegerAttr, IntegerType, StringAttr, FloatAttr, F64Type,
+    Location,
+    Module,
+    InsertionPoint,
+    IntegerAttr,
+    IntegerType,
+    StringAttr,
+    FloatAttr,
+    F64Type,
 )
+
+from rho.mlir.context import get_rho_context
 
 
 @pytest.fixture(scope="module")
 def ctx():
-    with Context() as c, Location.unknown():
-        from rho.mlir.dialect import RhoDialect
-        RhoDialect.load()
+    c = get_rho_context()
+    with Location.unknown(c):
         yield c
 
 

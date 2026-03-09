@@ -1,43 +1,63 @@
 """AST -> Rho MLIR dialect translation.
 
-Walks the AST and emits rho dialect ops with a threaded !rho.stack.
+Walks the AST and emits rho dialect ops with a threaded ``!rho.stack``.
 """
 
 from mlir.ir import (
-    Context, Location, Module, InsertionPoint,
-    IntegerAttr, IntegerType, FloatAttr, F64Type, StringAttr,
+    Location,
+    Module,
+    InsertionPoint,
+    IntegerAttr,
+    IntegerType,
+    FloatAttr,
+    F64Type,
+    StringAttr,
 )
 
-from rho.ast import Apply, Array, Def, Drop, Expr, Fn, Lit, Primitive, Program, Quote, Str, Word
+from rho.mlir.context import get_rho_context
+from rho.ast import (
+    Apply,
+    Array,
+    Def,
+    Drop,
+    Expr,
+    Fn,
+    Lit,
+    Match,
+    Primitive,
+    Program,
+    Quote,
+    Str,
+    Word,
+)
 
 
 STACK_PRIMITIVES = {"dup", "swap", "over", "drop"}
-BINARY_PRIMITIVES = {"+", "-", "*", "/"}
-
-
-_ctx: Context | None = None
-
-
-def _get_ctx() -> Context:
-    global _ctx
-    if _ctx is None:
-        _ctx = Context()
-        _ctx.__enter__()
-        Location.unknown().__enter__()
-        from rho.mlir.dialect import RhoDialect
-        RhoDialect.load()
-    return _ctx
+BINARY_PRIMITIVES = {"+", "-", "*", "/", ">", "<", "==", "!=", ">=", "<="}
 
 
 def compile_program(program: Program) -> Module:
     """Compile a Program AST to an MLIR Module in the rho dialect."""
-    ctx = _get_ctx()
+    ctx = get_rho_context()
     with Location.unknown(ctx):
         from rho.mlir.dialect import (
-            RhoDialect, StackType,
-            InitStackOp, ConstOp, MakeArrayOp, PrimOp,
-            DupOp, SwapOp, OverOp, DropOp as RhoDropOp,
-            DefOp, LoadOp, EvalOp, FnOp, CallOp, YieldOp, MainOp,
+            StackType,
+            InitStackOp,
+            ConstOp,
+            MakeArrayOp,
+            PrimOp,
+            DupOp,
+            SwapOp,
+            OverOp,
+            DropOp as RhoDropOp,
+            DefOp,
+            LoadOp,
+            EvalOp,
+            FnOp,
+            YieldOp,
+            MatchOp,
+            MatchCaseOp,
+            MainOp,
         )
 
         stack_op_map = {
@@ -114,11 +134,10 @@ def compile_program(program: Program) -> Module:
                 fn_stk_arg = fn_blk.add_argument(StackType.get(), Location.unknown())
                 with InsertionPoint(fn_blk):
                     fn_stk = fn_stk_arg
-                    if expr.params:
-                        for param in expr.params:
-                            d = DefOp(fn_stk)
-                            d.operation.attributes["name"] = StringAttr.get(param)
-                            fn_stk = d.out
+                    for param in expr.params:
+                        d = DefOp(fn_stk)
+                        d.operation.attributes["name"] = StringAttr.get(param)
+                        fn_stk = d.out
                     if isinstance(expr.body, list):
                         for stmt in expr.body:
                             fn_stk = emit_expr(stmt, fn_stk)
@@ -126,6 +145,33 @@ def compile_program(program: Program) -> Module:
                         fn_stk = emit_expr(expr.body, fn_stk)
                     YieldOp(fn_stk)
                 return fn.out
+
+            if isinstance(expr, Match):
+                m = MatchOp(stk)
+                m.cases.blocks.append()
+                cases_blk = m.cases.blocks[0]
+                with InsertionPoint(cases_blk):
+                    for case in expr.cases:
+                        case_op = MatchCaseOp()
+
+                        case_op.guard.blocks.append()
+                        gblk = case_op.guard.blocks[0]
+                        gstk = gblk.add_argument(StackType.get(), Location.unknown())
+                        with InsertionPoint(gblk):
+                            cur = gstk
+                            for guard_expr in case.guard:
+                                cur = emit_expr(guard_expr, cur)
+                            YieldOp(cur)
+
+                        case_op.body.blocks.append()
+                        bblk = case_op.body.blocks[0]
+                        bstk = bblk.add_argument(StackType.get(), Location.unknown())
+                        with InsertionPoint(bblk):
+                            cur = bstk
+                            for body_expr in case.body:
+                                cur = emit_expr(body_expr, cur)
+                            YieldOp(cur)
+                return m.out
 
             if isinstance(expr, Drop):
                 d = RhoDropOp(stk)
