@@ -39,16 +39,18 @@ def test_lower_tagging():
     assert "85" in s  # (42 << 1) | 1
 
 
-def test_lower_dup_add():
+def test_lower_eval_dup():
+    """dup is now an ordinary word, lowered via rho_eval."""
     s = _lower("5 dup +")
     assert "call @rho_push" in s
-    assert "call @rho_dup" in s
+    assert "call @rho_eval" in s
     assert "call @rho_prim_add" in s
 
 
-def test_lower_swap():
+def test_lower_swap_as_word():
+    """swap is now an ordinary word, lowered via rho_eval."""
     s = _lower("1 2 swap")
-    assert "call @rho_swap" in s
+    assert "call @rho_eval" in s
 
 
 def test_lower_multiple_prims():
@@ -65,7 +67,7 @@ def test_lower_comparison():
 def test_lower_no_rho_ops_remain():
     """After lowering, no rho dialect ops should remain for flat programs."""
     s = _lower("1 2 + 3 * dup swap")
-    for rho_op in ["rho.init_stack", "rho.const", "rho.prim", "rho.dup", "rho.swap", "rho.yield", "rho.main"]:
+    for rho_op in ["rho.init_stack", "rho.const", "rho.prim", "rho.yield", "rho.main"]:
         assert rho_op not in s, f"{rho_op} should not remain after lowering"
 
 

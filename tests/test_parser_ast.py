@@ -47,9 +47,9 @@ def test_parse_multiple_defs_and_expr():
     assert "Apply(Lit(5) Lit(5) Lit(5) Word('f'))" in r
 
 
-def test_parse_primitive():
+def test_parse_word():
     program = parse("dup")
-    assert ast_repr(program) == "Program(Primitive('dup'))"
+    assert ast_repr(program) == "Program(Word('dup'))"
 
 
 def test_parse_larger_program_pprint():
@@ -133,7 +133,7 @@ def test_parse_tacit():
     program = parse(source)
     r = ast_repr(program)
     assert "Def('double'" in r
-    assert "Primitive('dup')" in r
+    assert "Word('dup')" in r
     assert "Primitive('+')" in r
 
 
@@ -206,7 +206,7 @@ def test_parse_match():
     r = ast_repr(program)
     assert 'Fn((n) Match(' in r
     assert 'MatchCase({' in r
-    assert "Primitive('dup')" in r
+    assert "Word('dup')" in r
     assert "Primitive('>')" in r
     assert "Str('greater than zero')" in r
     assert "Word('printf')" in r

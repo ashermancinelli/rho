@@ -109,30 +109,17 @@ def test_prim_add(ctx):
     assert 'op = "+"' in s
 
 
-def test_dup(ctx):
-    from rho.mlir.dialect import ConstOp, DupOp, YieldOp
+def test_eval(ctx):
+    from rho.mlir.dialect import ConstOp, EvalOp, YieldOp
     module, blk, stk = _main(ctx)
     with InsertionPoint(blk):
         s1 = ConstOp(stk)
         s1.operation.attributes["value"] = _i64(10)
-        s2 = DupOp(s1.out)
+        s2 = EvalOp(s1.out)
+        s2.operation.attributes["name"] = StringAttr.get("dup")
         YieldOp(s2.out)
     assert module.operation.verify()
-    assert "rho.dup" in str(module)
-
-
-def test_swap(ctx):
-    from rho.mlir.dialect import ConstOp, SwapOp, YieldOp
-    module, blk, stk = _main(ctx)
-    with InsertionPoint(blk):
-        s1 = ConstOp(stk)
-        s1.operation.attributes["value"] = _i64(1)
-        s2 = ConstOp(s1.out)
-        s2.operation.attributes["value"] = _i64(2)
-        s3 = SwapOp(s2.out)
-        YieldOp(s3.out)
-    assert module.operation.verify()
-    assert "rho.swap" in str(module)
+    assert "rho.eval" in str(module)
 
 
 def test_drop(ctx):
@@ -167,7 +154,7 @@ def test_def_and_load(ctx):
 
 def test_fn_tacit(ctx):
     """Tacit function: double <- dup +"""
-    from rho.mlir.dialect import ConstOp, FnOp, DupOp, PrimOp, DefOp, YieldOp, StackType
+    from rho.mlir.dialect import ConstOp, FnOp, EvalOp, PrimOp, DefOp, YieldOp, StackType
     module, blk, stk = _main(ctx)
     with InsertionPoint(blk):
         fn = FnOp(stk)
@@ -175,7 +162,8 @@ def test_fn_tacit(ctx):
         fn_blk = fn.body.blocks[0]
         fn_stk = fn_blk.add_argument(StackType.get(), Location.unknown())
         with InsertionPoint(fn_blk):
-            s1 = DupOp(fn_stk)
+            s1 = EvalOp(fn_stk)
+            s1.operation.attributes["name"] = StringAttr.get("dup")
             s2 = PrimOp(s1.out)
             s2.operation.attributes["op"] = StringAttr.get("+")
             YieldOp(s2.out)
@@ -185,7 +173,7 @@ def test_fn_tacit(ctx):
     assert module.operation.verify()
     s = str(module)
     assert "rho.fn" in s
-    assert "rho.dup" in s
+    assert "rho.eval" in s
     assert 'name = "double"' in s
 
 
@@ -235,7 +223,7 @@ def test_full_program(ctx):
 def test_call(ctx):
     """Define f <- dup +, then: 5 f (call)."""
     from rho.mlir.dialect import (
-        ConstOp, FnOp, DupOp, PrimOp, DefOp, LoadOp, CallOp, YieldOp, StackType,
+        ConstOp, FnOp, EvalOp, PrimOp, DefOp, LoadOp, CallOp, YieldOp, StackType,
     )
     module, blk, stk = _main(ctx)
     with InsertionPoint(blk):
@@ -244,7 +232,8 @@ def test_call(ctx):
         fn_blk = fn.body.blocks[0]
         fn_stk = fn_blk.add_argument(StackType.get(), Location.unknown())
         with InsertionPoint(fn_blk):
-            fs1 = DupOp(fn_stk)
+            fs1 = EvalOp(fn_stk)
+            fs1.operation.attributes["name"] = StringAttr.get("dup")
             fs2 = PrimOp(fs1.out)
             fs2.operation.attributes["op"] = StringAttr.get("+")
             YieldOp(fs2.out)

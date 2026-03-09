@@ -13,7 +13,6 @@ from rho.ast import (
 import rho.mlir.ops as rho
 
 
-STACK_OPS = {"dup": rho.dup, "swap": rho.swap, "over": rho.over, "drop": rho.drop}
 BINARY_PRIMITIVES = {"+", "-", "*", "/", ">", "<", "==", "!=", ">=", "<="}
 
 
@@ -47,9 +46,6 @@ def emit_expr(expr: Expr, stk):
 
         case Quote(name=name):
             return rho.load(stk, name)
-
-        case Primitive(name=name) if name in STACK_OPS:
-            return STACK_OPS[name](stk)
 
         case Primitive(name=name) if name in BINARY_PRIMITIVES:
             return rho.prim(stk, name)

@@ -23,9 +23,6 @@ from rho.mlir.dialect import (
     ConstOp,
     MakeArrayOp,
     PrimOp,
-    DupOp,
-    SwapOp,
-    OverOp,
     DropOp,
     DefOp,
     LoadOp,
@@ -68,18 +65,6 @@ def prim(stk, op: str) -> "OpResult":
     p = PrimOp(stk)
     p.operation.attributes["op"] = StringAttr.get(op)
     return p.out
-
-
-def dup(stk) -> "OpResult":
-    return DupOp(stk).out
-
-
-def swap(stk) -> "OpResult":
-    return SwapOp(stk).out
-
-
-def over(stk) -> "OpResult":
-    return OverOp(stk).out
 
 
 def drop(stk) -> "OpResult":

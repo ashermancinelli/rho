@@ -56,25 +56,7 @@ class PrimOp(RhoDialect.Operation, name="prim"):
     out: Result[StackType[()]]
 
 
-# -- Ops: stack manipulation --
-
-class DupOp(RhoDialect.Operation, name="dup"):
-    """Duplicate the top of the stack."""
-    stk: Operand[StackType]
-    out: Result[StackType[()]]
-
-
-class SwapOp(RhoDialect.Operation, name="swap"):
-    """Swap the top two elements."""
-    stk: Operand[StackType]
-    out: Result[StackType[()]]
-
-
-class OverOp(RhoDialect.Operation, name="over"):
-    """Copy second element over the top."""
-    stk: Operand[StackType]
-    out: Result[StackType[()]]
-
+# -- Ops: drop --
 
 class DropOp(RhoDialect.Operation, name="drop"):
     """Discard the top of the stack."""

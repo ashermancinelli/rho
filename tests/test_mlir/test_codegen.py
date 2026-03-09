@@ -18,7 +18,7 @@ def test_codegen_simple_add():
 
 def test_codegen_tacit_double():
     s = _mlir("double <- dup +")
-    assert "rho.dup" in s
+    assert "rho.eval" in s
     assert "rho.prim" in s
     assert 'name = "double"' in s
 
@@ -42,7 +42,7 @@ def test_codegen_match():
     s = _mlir(src)
     assert 'rho.match' in s
     assert s.count('rho.match_case') == 2
-    assert 'rho.dup' in s
+    assert 'rho.eval' in s
     assert 'op = ">"' in s
     assert 'value = "pos"' in s
     assert 'value = "other"' in s

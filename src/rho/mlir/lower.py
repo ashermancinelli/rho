@@ -50,9 +50,6 @@ from rho.mlir.dialect import (
     InitStackOp,
     ConstOp,
     PrimOp,
-    DupOp,
-    SwapOp,
-    OverOp,
     DropOp,
     DefOp,
     LoadOp,
@@ -81,7 +78,8 @@ _fn_counter = 0
 
 def _name_hash(name: str) -> int:
     """Deterministic i64 hash of a name for runtime env lookup."""
-    return int(hashlib.sha256(name.encode()).hexdigest()[:16], 16)
+    h = int(hashlib.sha256(name.encode()).hexdigest()[:16], 16)
+    return h & 0x7FFFFFFFFFFFFFFF
 
 
 def convert_rho_to_runtime(op, pass_):
@@ -123,9 +121,9 @@ def convert_rho_to_runtime(op, pass_):
             result = func.CallOp([ptr], runtime_fn, [adaptor.stk])
         rewriter.replace_op(op, result)
 
-    def convert_stack_op(op, adaptor, converter, rewriter, runtime_name="rho_dup"):
+    def convert_drop(op, adaptor, converter, rewriter):
         with rewriter.ip:
-            result = func.CallOp([ptr], runtime_name, [adaptor.stk])
+            result = func.CallOp([ptr], "rho_drop", [adaptor.stk])
         rewriter.replace_op(op, result)
 
     def convert_def(op, adaptor, converter, rewriter):
@@ -181,10 +179,7 @@ def convert_rho_to_runtime(op, pass_):
     patterns.add_conversion(InitStackOp, convert_init_stack, type_converter)
     patterns.add_conversion(ConstOp, convert_const, type_converter)
     patterns.add_conversion(PrimOp, convert_prim, type_converter)
-    patterns.add_conversion(DupOp, partial(convert_stack_op, runtime_name="rho_dup"), type_converter)
-    patterns.add_conversion(SwapOp, partial(convert_stack_op, runtime_name="rho_swap"), type_converter)
-    patterns.add_conversion(OverOp, partial(convert_stack_op, runtime_name="rho_over"), type_converter)
-    patterns.add_conversion(DropOp, partial(convert_stack_op, runtime_name="rho_drop"), type_converter)
+    patterns.add_conversion(DropOp, convert_drop, type_converter)
     patterns.add_conversion(DefOp, convert_def, type_converter)
     patterns.add_conversion(LoadOp, convert_load, type_converter)
     patterns.add_conversion(EvalOp, convert_eval, type_converter)
@@ -206,9 +201,6 @@ def convert_rho_to_runtime(op, pass_):
         func.FuncOp("rho_make_closure", FunctionType.get([ptr, ptr], [i64]), visibility="private")
         for rt_name in PRIM_RUNTIME_NAMES.values():
             func.FuncOp(rt_name, FunctionType.get([ptr], [ptr]), visibility="private")
-        func.FuncOp("rho_dup", FunctionType.get([ptr], [ptr]), visibility="private")
-        func.FuncOp("rho_swap", FunctionType.get([ptr], [ptr]), visibility="private")
-        func.FuncOp("rho_over", FunctionType.get([ptr], [ptr]), visibility="private")
         func.FuncOp("rho_drop", FunctionType.get([ptr], [ptr]), visibility="private")
         func.FuncOp("rho_def", FunctionType.get([ptr, i64], [ptr]), visibility="private")
         func.FuncOp("rho_load", FunctionType.get([ptr, i64], [ptr]), visibility="private")

@@ -8,7 +8,7 @@ from tree_sitter import Language, Parser as TSParser
 from rho.ast import Apply, Array, Drop, Fn, Def, Expr, Lit, Match, MatchCase, Primitive, Program, Quote, Str, Word
 
 
-PRIMITIVES = {"+", "-", "*", "/", ">", "<", "==", "!=", ">=", "<=", "dup", "swap", "drop", "over"}
+PRIMITIVES = {"+", "-", "*", "/", ">", "<", "==", "!=", ">=", "<="}
 
 _language = Language(tree_sitter_rho.language())
 
