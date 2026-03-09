@@ -122,6 +122,30 @@ class YieldOp(RhoDialect.Operation, name="yield", traits=[IsTerminatorTrait]):
     stk: Operand[StackType]
 
 
+class MatchCaseOp(RhoDialect.Operation, name="match_case"):
+    """A single guarded match case.
+
+    The guard region receives a fresh mini-stack seeded from the match inputs and
+    must yield a stack whose top is a truth value. If truthy, that top value is
+    popped and the body region receives the remaining guard-produced mini-stack.
+    The body yields a stack, of which only the top value escapes back to the
+    outer stack.
+    """
+    guard: Region
+    body: Region
+
+
+class MatchOp(RhoDialect.Operation, name="match", traits=[NoTerminatorTrait]):
+    """Evaluate guarded match cases against a mini-stack seeded from current inputs.
+
+    Takes the outer stack, evaluates cases in order, and pushes one resulting
+    value (the top of the selected body stack) back onto the outer stack.
+    """
+    stk: Operand[StackType]
+    cases: Region
+    out: Result[StackType[()]]
+
+
 # -- Ops: entry point --
 
 class MainOp(RhoDialect.Operation, name="main"):

@@ -5,10 +5,10 @@ from typing import Union
 import tree_sitter_rho
 from tree_sitter import Language, Parser as TSParser
 
-from rho.ast import Apply, Array, Drop, Fn, Def, Expr, Lit, Primitive, Program, Quote, Str, Word
+from rho.ast import Apply, Array, Drop, Fn, Def, Expr, Lit, Match, MatchCase, Primitive, Program, Quote, Str, Word
 
 
-PRIMITIVES = {"+", "-", "*", "/", "dup", "swap", "drop", "over"}
+PRIMITIVES = {"+", "-", "*", "/", ">", "<", "==", "!=", ">=", "<=", "dup", "swap", "drop", "over"}
 
 _language = Language(tree_sitter_rho.language())
 
@@ -57,6 +57,17 @@ def _convert_expression(node) -> Expr:
             if child.type == "identifier":
                 return Quote(name=_text(child))
         raise ParseError("quote missing identifier")
+
+    if t == "match_expr":
+        cases = []
+        for child in node.named_children:
+            if child.type == "match_case":
+                guard_block = child.child_by_field_name("guard")
+                body_block = child.child_by_field_name("body")
+                if guard_block is None or body_block is None:
+                    raise ParseError("malformed match case")
+                cases.append(MatchCase(guard=_convert_block(guard_block), body=_convert_block(body_block)))
+        return Match(cases=cases)
 
     if t == "drop":
         return Drop()

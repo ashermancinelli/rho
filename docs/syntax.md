@@ -67,6 +67,8 @@ Use `&name` to push a function (or other value) without auto-calling it.
 10 iota 0 &plus fold
 ```
 
+Words like `iota` and `fold` are ordinary names, typically provided by the runtime or standard library, not special syntax.
+
 ## Arrays
 
 Square brackets create array literals.
@@ -92,6 +94,10 @@ Square brackets create array literals.
 ```
 
 Each case is `{ guard_expr } { body_expr }`.
+
+The values named by the leading `( ... )` seed a fresh mini-stack for each case.
+The guard runs first. If its top value is truthy, that truth value is removed and
+its remaining mini-stack is passed to the body.
 
 ## Scope
 

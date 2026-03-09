@@ -198,3 +198,26 @@ def test_parse_quote_in_apply():
     r = ast_repr(program)
     assert "Apply(" in r
     assert "Quote(&double)" in r
+
+
+def test_parse_match():
+    source = '(n) match { { dup 0 > } { "greater than zero" printf } { true } { "LE zero" printf } }'
+    program = parse(source)
+    r = ast_repr(program)
+    assert 'Fn((n) Match(' in r
+    assert 'MatchCase({' in r
+    assert "Primitive('dup')" in r
+    assert "Primitive('>')" in r
+    assert "Str('greater than zero')" in r
+    assert "Word('printf')" in r
+
+
+def test_parse_iota_fold():
+    source = '10 iota 0 &plus fold'
+    program = parse(source)
+    r = ast_repr(program)
+    assert "Lit(10)" in r
+    assert "Word('iota')" in r
+    assert "Lit(0)" in r
+    assert "Quote(&plus)" in r
+    assert "Word('fold')" in r

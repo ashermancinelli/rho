@@ -19,6 +19,7 @@
 (quote
   (identifier) @variable)
 "&" @keyword.operator
+"match" @keyword
 
 (comment) @comment
 

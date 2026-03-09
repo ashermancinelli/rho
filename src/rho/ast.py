@@ -50,7 +50,7 @@ class Word(ASTNode):
 
 @dataclass
 class Primitive(ASTNode):
-    """Built-in primitive (e.g. +, dup, swap)."""
+    """Built-in primitive/combinator (e.g. +, dup, iota, fold, >)."""
     name: str
 
     def __str__(self) -> str:
@@ -103,6 +103,30 @@ class Array(ASTNode):
         return f"Array([{inner}])"
 
 
+
+
+@dataclass
+class MatchCase(ASTNode):
+    """A single guarded match case: { guard } { body }."""
+    guard: list["Expr"]
+    body: list["Expr"]
+
+    def __str__(self) -> str:
+        guard = "; ".join(str(e) for e in self.guard)
+        body = "; ".join(str(e) for e in self.body)
+        return f"MatchCase({{{guard}}} => {{{body}}})"
+
+
+@dataclass
+class Match(ASTNode):
+    """Guarded match expression."""
+    cases: list[MatchCase]
+
+    def __str__(self) -> str:
+        inner = "; ".join(str(c) for c in self.cases)
+        return f"Match({inner})"
+
+
 @dataclass
 class Quote(ASTNode):
     """Quote: &name — push a value without calling it."""
@@ -120,7 +144,7 @@ class Drop(ASTNode):
         return "Drop()"
 
 
-Expr = Union[Lit, Str, Array, Word, Primitive, Apply, Fn, Quote, Drop]
+Expr = Union[Lit, Str, Array, Word, Primitive, Apply, Fn, Match, Quote, Drop]
 
 
 @dataclass

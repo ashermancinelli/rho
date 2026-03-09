@@ -19,7 +19,7 @@ module.exports = grammar({
     definition: ($) =>
       seq(field("name", $.identifier), "<-", field("body", $._expression)),
 
-    _expression: ($) => choice($.fn, $.drop, $.apply, $._atom),
+    _expression: ($) => choice($.match_expr, $.fn, $.drop, $.apply, $._atom),
 
     apply: ($) => prec.left(1, seq($._atom, repeat1($._atom))),
 
@@ -32,8 +32,22 @@ module.exports = grammar({
     fn: ($) =>
       prec(2, seq(
         "(", field("params", repeat1($.param)), ")",
-        field("body", choice($.block, $._expression, $.drop)),
+        field("body", choice($.match_expr, $.block, $._expression, $.drop)),
       )),
+
+    match_expr: ($) =>
+      seq(
+        "match",
+        "{",
+        repeat(seq($.match_case, optional($._sep))),
+        "}",
+      ),
+
+    match_case: ($) =>
+      seq(
+        field("guard", $.block),
+        field("body", $.block),
+      ),
 
     param: ($) => $.identifier,
 
@@ -62,7 +76,7 @@ module.exports = grammar({
 
     identifier: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
 
-    primitive: ($) => choice("+", "-", "*", "/"),
+    primitive: ($) => choice("+", "-", "*", "/", ">", "<", "==", "!=", ">=", "<="),
 
     comment: ($) => seq("--", /.*/),
   },

@@ -19,7 +19,7 @@ Rho is stack-based. Expressions push and pop values from an implicit operand sta
 - **Array literal**: pushes one array value.
 - **Identifier**: loads a value; if it is a function, it is auto-called.
 - **Quoted identifier** (`&name`): pushes the value without auto-calling it.
-- **Primitive** (`+`, `-`, `*`, `/`): pops operands, pushes the result.
+- **Primitive** (`+`, `-`, `*`, `/`, comparisons, stack shuffles): compiler-known core words with direct lowering.
 - **Drop** (`.`): pops and discards the top of the stack.
 - **Function call**: implicit via identifier evaluation.
 
@@ -69,9 +69,13 @@ Evaluates `expr`, pops the top of the stack, binds it to `name` in the current s
 
 Semantics:
 - Each case is `{ guard_expr } { body_expr }`.
-- The guard runs on the current stack.
-- If the top of the resulting stack is truthy, that case matches.
-- The body runs on the stack produced by the matching guard.
+- The leading `(a b c)` form pops and binds the match inputs, and also seeds each case mini-stack with `[a, b, c]` (with `c` on top).
+- Each guard runs on a fresh mini-stack seeded from those same bound values.
+- If the guard leaves an empty stack, it is a runtime error.
+- If the top of the guard-produced mini-stack is truthy, that case matches.
+- On a successful match, the truth value is popped and the body runs on the remaining guard-produced mini-stack.
+- Failed guards are discarded completely; later cases start from a fresh seed again.
+- When the selected body finishes, only the top of its final mini-stack is pushed back onto the outer stack.
 - The first truthy guard wins.
 - If no guard matches, it is a runtime error.
 
@@ -86,9 +90,11 @@ Iteration is primarily expressed with array/range combinators.
 ```
 
 Here:
-- `iota` pushes `[0, 1, ..., n-1]`
-- `fold` requires an explicit initial accumulator
+- `iota` is typically a runtime/stdlib word that pushes `[0, 1, ..., n-1]`
+- `fold` is typically a runtime/stdlib word and requires an explicit initial accumulator
 - `&plus` quotes the function value instead of calling it
+
+These are ordinary names, not dedicated syntax. The compiler only needs special treatment for a small core (`match`, stack shuffles, arithmetic/comparison intrinsics, quoting, literals, definitions).
 
 ## Machine Representation
 

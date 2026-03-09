@@ -195,3 +195,48 @@ Quote in apply
     (number)
     (quote
       (identifier))))
+
+
+================
+Match
+================
+(n) match { { dup 0 > } { "greater than zero" printf } { true } { "LE zero" printf } }
+---
+
+(program
+  (fn
+    params: (param
+      (identifier))
+    body: (match_expr
+      (match_case
+        guard: (block
+          (apply
+            (identifier)
+            (number)
+            (primitive)))
+        body: (block
+          (apply
+            (string)
+            (identifier))))
+      (match_case
+        guard: (block
+          (identifier))
+        body: (block
+          (apply
+            (string)
+            (identifier)))))))
+
+================
+Iota fold
+================
+10 iota 0 &plus fold
+---
+
+(program
+  (apply
+    (number)
+    (identifier)
+    (number)
+    (quote
+      (identifier))
+    (identifier)))

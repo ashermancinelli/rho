@@ -253,3 +253,71 @@ def test_call(ctx):
     s = str(module)
     assert "rho.call" in s
     assert "rho.fn" in s
+
+
+def test_match_op(ctx):
+    from rho.mlir.dialect import MatchOp, MatchCaseOp, YieldOp, StackType, PrimOp, ConstOp
+    module, blk, stk = _main(ctx)
+    with InsertionPoint(blk):
+        m = MatchOp(stk)
+        m.cases.blocks.append()
+        cases_blk = m.cases.blocks[0]
+        with InsertionPoint(cases_blk):
+            case1 = MatchCaseOp()
+            # guard region
+            case1.guard.blocks.append()
+            gblk = case1.guard.blocks[0]
+            gstk = gblk.add_argument(StackType.get(), Location.unknown())
+            with InsertionPoint(gblk):
+                g1 = PrimOp(gstk)
+                g1.operation.attributes["op"] = StringAttr.get(">")
+                YieldOp(g1.out)
+            # body region
+            case1.body.blocks.append()
+            bblk = case1.body.blocks[0]
+            bstk = bblk.add_argument(StackType.get(), Location.unknown())
+            with InsertionPoint(bblk):
+                c = ConstOp(bstk)
+                c.operation.attributes["value"] = StringAttr.get("pos")
+                YieldOp(c.out)
+        YieldOp(m.out)
+    assert module.operation.verify()
+    s = str(module)
+    assert "rho.match" in s
+    assert "rho.match_case" in s
+    assert "rho.prim" in s
+
+
+def test_match_two_cases(ctx):
+    from rho.mlir.dialect import MatchOp, MatchCaseOp, YieldOp, StackType, PrimOp, ConstOp
+    module, blk, stk = _main(ctx)
+    with InsertionPoint(blk):
+        m = MatchOp(stk)
+        m.cases.blocks.append()
+        cases_blk = m.cases.blocks[0]
+        with InsertionPoint(cases_blk):
+            for opname, result in [(">", "pos"), ("true", "other")]:
+                case = MatchCaseOp()
+                case.guard.blocks.append()
+                gblk = case.guard.blocks[0]
+                gstk = gblk.add_argument(StackType.get(), Location.unknown())
+                with InsertionPoint(gblk):
+                    if opname == "true":
+                        c = ConstOp(gstk)
+                        c.operation.attributes["value"] = IntegerAttr.get(IntegerType.get_signless(64), 1)
+                        YieldOp(c.out)
+                    else:
+                        g = PrimOp(gstk)
+                        g.operation.attributes["op"] = StringAttr.get(opname)
+                        YieldOp(g.out)
+                case.body.blocks.append()
+                bblk = case.body.blocks[0]
+                bstk = bblk.add_argument(StackType.get(), Location.unknown())
+                with InsertionPoint(bblk):
+                    c = ConstOp(bstk)
+                    c.operation.attributes["value"] = StringAttr.get(result)
+                    YieldOp(c.out)
+        YieldOp(m.out)
+    assert module.operation.verify()
+    s = str(module)
+    assert s.count("rho.match_case") == 2
