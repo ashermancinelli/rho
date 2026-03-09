@@ -1,2 +1,2 @@
-- [ ] add snake case convenience wrappers around mlir ops that give you the result directly.
 - [ ] remove unneeded intrinsics. most of these can be replaced with plain functions.
+- [ ] lower to standard dialects
