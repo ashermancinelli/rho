@@ -1,0 +1,4 @@
+dup <- (a) { a a }
+drop <- (a) { }
+swap <- (a b) { b a }
+over <- (a b) { a b a }
