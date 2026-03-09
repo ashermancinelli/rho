@@ -5,6 +5,7 @@ from rho.mlir.codegen import compile_program
 from rho.mlir.context import get_rho_context
 from mlir.ir import Location
 from mlir.passmanager import PassManager
+from rho.mlir.outline import outline_functions
 from rho.mlir.lower import convert_rho_to_runtime
 
 
@@ -13,6 +14,7 @@ def _lower(src: str) -> str:
     with Location.unknown(ctx):
         module = compile_program(parse(src))
         pm = PassManager()
+        pm.add(outline_functions)
         pm.add(convert_rho_to_runtime)
         pm.run(module.operation)
         return str(module)
@@ -76,3 +78,15 @@ def test_lower_generic_push():
     s = _lower("5 3 +")
     assert "rho_push_int" not in s
     assert "rho_push" in s
+
+
+def test_lower_function_definition():
+    """Outlined function bodies lower to private func.funcs plus closure construction."""
+    s = _lower("dup <- (a) { a a }")
+    assert 'func.func private @rho_fn_' in s
+    assert 'call @rho_def' in s
+    assert 'call @rho_eval' in s
+    assert 'call @rho_make_closure' in s
+    assert 'name = "dup"' not in s  # lowered to hash constant
+    assert 'rho.fn_def' not in s
+    assert 'rho.fn_ref' not in s

@@ -27,6 +27,7 @@ from functools import partial
 import hashlib
 
 from mlir.ir import (
+    Block,
     FunctionType,
     InsertionPoint,
     IntegerAttr,
@@ -82,6 +83,84 @@ def _name_hash(name: str) -> int:
     """Deterministic i64 hash of a name for runtime env lookup."""
     h = int(hashlib.sha256(name.encode()).hexdigest()[:16], 16)
     return h & 0x7FFFFFFFFFFFFFFF
+
+
+def _attr_string(attr) -> str:
+    return str(attr).strip('"')
+
+
+def _tagged_i64_constant(val_attr, i64):
+    raw_int = val_attr.value
+    tagged_int = (raw_int << 1) | 1
+    return llvm.mlir_constant(IntegerAttr.get(i64, tagged_int))
+
+
+def _lower_rho_block_to_func(old_block: Block, new_block: Block, ptr, i64):
+    """Manually lower rho ops inside an outlined rho.fn_def body to func/llvm ops.
+
+    This bypasses apply_partial_conversion for function bodies because the
+    conversion framework does not recurse into newly-created func.func bodies.
+    """
+    value_map = {}
+    # old block arg0 (!rho.stack) -> new block arg0 (!llvm.ptr)
+    if len(old_block.arguments) >= 1:
+        value_map[old_block.arguments[0]] = new_block.arguments[0]
+
+    with InsertionPoint(new_block):
+        for old_op in list(old_block.operations):
+            name = old_op.name
+            if name == "rho.const":
+                stk = value_map[old_op.operands[0]]
+                val_attr = old_op.attributes["value"]
+                if isinstance(val_attr, IntegerAttr):
+                    tagged = _tagged_i64_constant(val_attr, i64)
+                else:
+                    tagged = llvm.mlir_constant(IntegerAttr.get(i64, 0))
+                result = func.CallOp([ptr], "rho_push", [stk, tagged]).result
+                value_map[old_op.results[0]] = result
+            elif name == "rho.prim":
+                stk = value_map[old_op.operands[0]]
+                op_name = _attr_string(old_op.attributes["op"])
+                runtime_fn = PRIM_RUNTIME_NAMES.get(op_name, f"rho_prim_{op_name}")
+                result = func.CallOp([ptr], runtime_fn, [stk]).result
+                value_map[old_op.results[0]] = result
+            elif name == "rho.drop":
+                stk = value_map[old_op.operands[0]]
+                result = func.CallOp([ptr], "rho_drop", [stk]).result
+                value_map[old_op.results[0]] = result
+            elif name == "rho.def":
+                stk = value_map[old_op.operands[0]]
+                name_h = llvm.mlir_constant(
+                    IntegerAttr.get(i64, _name_hash(_attr_string(old_op.attributes["name"])))
+                )
+                result = func.CallOp([ptr], "rho_def", [stk, name_h]).result
+                value_map[old_op.results[0]] = result
+            elif name == "rho.load":
+                stk = value_map[old_op.operands[0]]
+                name_h = llvm.mlir_constant(
+                    IntegerAttr.get(i64, _name_hash(_attr_string(old_op.attributes["name"])))
+                )
+                result = func.CallOp([ptr], "rho_load", [stk, name_h]).result
+                value_map[old_op.results[0]] = result
+            elif name == "rho.eval":
+                stk = value_map[old_op.operands[0]]
+                name_h = llvm.mlir_constant(
+                    IntegerAttr.get(i64, _name_hash(_attr_string(old_op.attributes["name"])))
+                )
+                result = func.CallOp([ptr], "rho_eval", [stk, name_h]).result
+                value_map[old_op.results[0]] = result
+            elif name == "rho.fn_ref":
+                stk = value_map[old_op.operands[0]]
+                fn_name = _attr_string(old_op.attributes["sym_name"])
+                fn_ptr = func.CallOp([ptr], f"rho_get_fn_ptr_{fn_name}", []).result
+                closure_val = func.CallOp([i64], "rho_make_closure", [fn_ptr, stk]).result
+                result = func.CallOp([ptr], "rho_push", [stk, closure_val]).result
+                value_map[old_op.results[0]] = result
+            elif name == "rho.yield":
+                stk = value_map[old_op.operands[0]]
+                func.ReturnOp([stk])
+            else:
+                raise RuntimeError(f"manual fn lowering does not yet handle op {name}")
 
 
 def convert_rho_to_runtime(op, pass_):
@@ -209,13 +288,12 @@ def convert_rho_to_runtime(op, pass_):
         fn_type = FunctionType.get([ptr, ptr], [ptr])
         with InsertionPoint(fn_def_op):
             fn_op = func.FuncOp(fn_name, fn_type, visibility="private")
-        fn_def_op.regions[0].blocks[0].append_to(fn_op.body)
+        fn_op.body.blocks.append()
         blk = fn_op.body.blocks[0]
-        new_stk = blk.add_argument(ptr, Location.unknown())
         blk.add_argument(ptr, Location.unknown())
-        if len(blk.arguments) > 2:
-            blk.arguments[0].replace_all_uses_with(new_stk)
-            blk.erase_argument(0)
+        blk.add_argument(ptr, Location.unknown())
+        old_block = fn_def_op.regions[0].blocks[0]
+        _lower_rho_block_to_func(old_block, blk, ptr, i64)
         fn_def_op.erase()
 
     apply_partial_conversion(op, target, patterns.freeze(), config)
