@@ -3,6 +3,7 @@
 from rho.parser import parse
 from rho.mlir.codegen import compile_program
 from rho.mlir.context import get_rho_context
+from rho.mlir.outline import outline_functions
 from rho.mlir.lower import convert_rho_to_runtime
 from rho.repl import run_repl
 
@@ -18,6 +19,7 @@ def _handle(text: str) -> None:
         print(module)
 
         pm = PassManager()
+        pm.add(outline_functions)
         pm.add(convert_rho_to_runtime)
         pm.run(module.operation)
 

@@ -93,6 +93,25 @@ class FnOp(RhoDialect.Operation, name="fn"):
     out: Result[StackType[()]]
 
 
+class FnDefOp(RhoDialect.Operation, name="fn_def", traits=[NoTerminatorTrait]):
+    """Module-level outlined function definition. Body contains rho ops.
+
+    Created by the outline pass from nested FnOp regions. The body's
+    single block takes one !rho.stack arg and is terminated by rho.yield.
+    Attribute "sym_name" is the function's unique name.
+    """
+    body: Region
+
+
+class FnRefOp(RhoDialect.Operation, name="fn_ref"):
+    """Reference an outlined function by name and push a closure onto the stack.
+
+    Attribute "sym_name" references a FnDefOp at module scope.
+    """
+    stk: Operand[StackType]
+    out: Result[StackType[()]]
+
+
 class CallOp(RhoDialect.Operation, name="call"):
     """Pop a function from the stack and call it. The function receives and returns the stack."""
     stk: Operand[StackType]

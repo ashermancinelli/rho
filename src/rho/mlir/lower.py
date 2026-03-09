@@ -55,6 +55,8 @@ from rho.mlir.dialect import (
     LoadOp,
     EvalOp,
     FnOp,
+    FnDefOp,
+    FnRefOp,
     YieldOp,
     MainOp,
 )
@@ -147,17 +149,21 @@ def convert_rho_to_runtime(op, pass_):
             result = func.CallOp([ptr], "rho_eval", [adaptor.stk, name_h])
         rewriter.replace_op(op, result)
 
-    _extracted_fns = []
+    def convert_fn_def(op, adaptor, converter, rewriter):
+        rewriter.replace_op(op, [])
+
+    def convert_fn_ref(op, adaptor, converter, rewriter):
+        fn_name = str(op.attributes["sym_name"]).strip('"')
+        with rewriter.ip:
+            fn_ptr = llvm.mlir_zero(ptr)
+            closure_val = func.CallOp([i64], "rho_make_closure", [fn_ptr, adaptor.stk])
+            result = func.CallOp([ptr], "rho_push", [adaptor.stk, closure_val.result])
+        rewriter.replace_op(op, result)
 
     def convert_fn(op, adaptor, converter, rewriter):
-        global _fn_counter
-        fn_name = f"rho_fn_{_fn_counter}"
-        _fn_counter += 1
-        _extracted_fns.append((fn_name, op))
-
         with rewriter.ip:
-            fn_ptr = func.CallOp([ptr], f"rho_get_fn_ptr_{fn_name}", [])
-            closure_val = func.CallOp([i64], "rho_make_closure", [fn_ptr.result, adaptor.stk])
+            fn_ptr = llvm.mlir_zero(ptr)
+            closure_val = func.CallOp([i64], "rho_make_closure", [fn_ptr, adaptor.stk])
             result = func.CallOp([ptr], "rho_push", [adaptor.stk, closure_val.result])
         rewriter.replace_op(op, result)
 
@@ -181,6 +187,8 @@ def convert_rho_to_runtime(op, pass_):
     patterns.add_conversion(DefOp, convert_def, type_converter)
     patterns.add_conversion(LoadOp, convert_load, type_converter)
     patterns.add_conversion(EvalOp, convert_eval, type_converter)
+    patterns.add_conversion(FnDefOp, convert_fn_def, type_converter)
+    patterns.add_conversion(FnRefOp, convert_fn_ref, type_converter)
     patterns.add_conversion(FnOp, convert_fn, type_converter)
     patterns.add_conversion(YieldOp, convert_yield, type_converter)
     patterns.add_conversion(MainOp, convert_main, type_converter)
@@ -190,6 +198,25 @@ def convert_rho_to_runtime(op, pass_):
 
     config = ConversionConfig()
     config.build_materializations = False
+
+    fn_defs = []
+    for child in list(op.regions[0].blocks[0]):
+        if child.name == "rho.fn_def":
+            fn_name = str(child.attributes["sym_name"]).strip('"')
+            fn_defs.append((fn_name, child))
+
+    for fn_name, fn_def_op in fn_defs:
+        fn_type = FunctionType.get([ptr, ptr], [ptr])
+        with InsertionPoint(fn_def_op):
+            fn_op = func.FuncOp(fn_name, fn_type, visibility="private")
+        fn_def_op.regions[0].blocks[0].append_to(fn_op.body)
+        blk = fn_op.body.blocks[0]
+        new_stk = blk.add_argument(ptr, Location.unknown())
+        blk.add_argument(ptr, Location.unknown())
+        if len(blk.arguments) > 2:
+            blk.arguments[0].replace_all_uses_with(new_stk)
+            blk.erase_argument(0)
+        fn_def_op.erase()
 
     apply_partial_conversion(op, target, patterns.freeze(), config)
 
@@ -203,7 +230,3 @@ def convert_rho_to_runtime(op, pass_):
         func.FuncOp("rho_def", FunctionType.get([ptr, i64], [ptr]), visibility="private")
         func.FuncOp("rho_load", FunctionType.get([ptr, i64], [ptr]), visibility="private")
         func.FuncOp("rho_eval", FunctionType.get([ptr, i64], [ptr]), visibility="private")
-        fn_body_type = FunctionType.get([ptr, ptr], [ptr])
-        for fn_name, _ in _extracted_fns:
-            func.FuncOp(fn_name, fn_body_type, visibility="private")
-            func.FuncOp(f"rho_get_fn_ptr_{fn_name}", FunctionType.get([], [ptr]), visibility="private")
